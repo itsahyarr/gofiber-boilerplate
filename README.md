@@ -160,11 +160,25 @@ Uses **PASETO V2 (local)** which is more secure than standard JWT as it avoids a
 - **ADMIN**: Full access
 - **USER**: Access to own profile
 
+### Filtering & Searching (ADMIN)
+The `GET /api/v1/users` endpoint supports advanced dynamic filtering using **kebab-case** parameters:
+
+| Parameter | Field Map | Description |
+|-----------|-----------|-------------|
+| `first-name` | `firstName` | Filter by first name |
+| `last-name` | `lastName` | Filter by last name |
+| `email` | `email` | Filter by email |
+| `role` | `role` | Filter by role (`ADMIN`/`USER`) |
+| `is-active` | `isActive` | Filter by status (`true`/`false`) |
+| `search` | N/A | Global regex search across name and email |
+
+### Endpoints
 | Method | Endpoint | Description | Role |
 |--------|----------|-------------|------|
 | GET | `/api/v1/users/me` | Get current user | USER |
-| GET | `/api/v1/users` | List all users | ADMIN |
+| GET | `/api/v1/users` | List all users (with filters) | ADMIN |
 | GET | `/api/v1/users/:id` | Get user by ID | ADMIN |
+| DELETE | `/api/v1/users/:id` | Delete user | ADMIN |
 
 ## 📦 MongoDB Sharded Cluster
 The `docker-compose.yml` sets up a complete sharded cluster with a Query Router (**mongos**), demonstrating production-ready horizontal scaling patterns.
@@ -180,6 +194,8 @@ The `docker-compose.yml` sets up a complete sharded cluster with a Query Router 
 ```json
 {
   "success": true,
+  "code": 201,
+  "status": "CREATED",
   "message": "user registered successfully",
   "data": {
     "createdAt": "Sabtu, 27 Desember 2025 - 22:15 WIB",
@@ -192,12 +208,26 @@ The `docker-compose.yml` sets up a complete sharded cluster with a Query Router 
 ```json
 {
   "success": true,
+  "code": 200,
+  "status": "OK",
   "data": [...],
   "meta": {
     "currentPage": 1,
-    "lastPage": 10,
+    "from": 1,
+    "lastPage": 5,
+    "links": [
+      { "url": null, "label": "&laquo; Previous", "active": false },
+      { "url": "http://localhost:3000/api/v1/users?page=1", "label": "1", "active": true },
+      { "url": "http://localhost:3000/api/v1/users?page=2", "label": "Next &raquo;", "active": false }
+    ],
+    "path": "http://localhost:3000/api/v1/users",
     "perPage": 10,
-    "total": 100
+    "to": 10,
+    "total": 50,
+    "firstPageUrl": "http://localhost:3000/api/v1/users?page=1",
+    "lastPageUrl": "http://localhost:3000/api/v1/users?page=5",
+    "nextPageUrl": "http://localhost:3000/api/v1/users?page=2",
+    "prevPageUrl": null
   }
 }
 ```

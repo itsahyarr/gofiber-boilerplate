@@ -23,7 +23,7 @@ var (
 // UserService defines the interface for user operations
 type UserService interface {
 	GetByID(ctx context.Context, id string) (*dto.UserResponse, error)
-	GetAll(ctx context.Context, page, pageSize int) ([]dto.UserResponse, int64, error)
+	GetAll(ctx context.Context, filter bson.M, page, pageSize int) ([]dto.UserResponse, int64, error)
 	Update(ctx context.Context, id string, req *dto.UpdateUserRequest) (*dto.UserResponse, error)
 	Delete(ctx context.Context, id string) error
 	ChangePassword(ctx context.Context, id string, req *dto.ChangePasswordRequest) error
@@ -57,8 +57,8 @@ func (s *userServiceImpl) GetByID(ctx context.Context, id string) (*dto.UserResp
 	return &response, nil
 }
 
-func (s *userServiceImpl) GetAll(ctx context.Context, page, pageSize int) ([]dto.UserResponse, int64, error) {
-	users, total, err := s.userRepo.FindAll(ctx, page, pageSize)
+func (s *userServiceImpl) GetAll(ctx context.Context, filter bson.M, page, pageSize int) ([]dto.UserResponse, int64, error) {
+	users, total, err := s.userRepo.FindAll(ctx, filter, page, pageSize)
 	if err != nil {
 		logger.Error("failed to get all users", zap.Error(err))
 		return nil, 0, err

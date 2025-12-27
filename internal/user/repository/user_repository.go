@@ -22,7 +22,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *entity.User) error
 	FindByID(ctx context.Context, id string) (*entity.User, error)
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)
-	FindAll(ctx context.Context, page, pageSize int) ([]*entity.User, int64, error)
+	FindAll(ctx context.Context, filter bson.M, page, pageSize int) ([]*entity.User, int64, error)
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id string) error
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
@@ -82,13 +82,13 @@ func (r *userRepositoryMongo) FindByEmail(ctx context.Context, email string) (*e
 	return &user, nil
 }
 
-func (r *userRepositoryMongo) FindAll(ctx context.Context, page, pageSize int) ([]*entity.User, int64, error) {
+func (r *userRepositoryMongo) FindAll(ctx context.Context, filter bson.M, page, pageSize int) ([]*entity.User, int64, error) {
 	skip := int64((page - 1) * pageSize)
 	limit := int64(pageSize)
 
 	opts := options.Find().SetSkip(skip).SetLimit(limit).SetSort(bson.D{{Key: "created_at", Value: -1}})
 
-	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -99,7 +99,7 @@ func (r *userRepositoryMongo) FindAll(ctx context.Context, page, pageSize int) (
 		return nil, 0, err
 	}
 
-	total, err := r.collection.CountDocuments(ctx, bson.M{})
+	total, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}

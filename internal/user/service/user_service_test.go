@@ -15,6 +15,9 @@ import (
 func TestGetByID(t *testing.T) {
 	// 1. Setup Mock
 	mockRepo := &mock.MockUserRepository{
+		FindAllFunc: func(ctx context.Context, filter bson.M, page, pageSize int) ([]*entity.User, int64, error) {
+			return nil, 0, nil
+		},
 		FindByIDFunc: func(ctx context.Context, id string) (*entity.User, error) {
 			objID, _ := bson.ObjectIDFromHex("658bd7c1f1e29e0001bcdefg")
 			return &entity.User{
@@ -43,6 +46,9 @@ func TestGetByID(t *testing.T) {
 func TestGetByID_NotFound(t *testing.T) {
 	// 1. Setup Mock to return NotFound
 	mockRepo := &mock.MockUserRepository{
+		FindAllFunc: func(ctx context.Context, filter bson.M, page, pageSize int) ([]*entity.User, int64, error) {
+			return nil, 0, nil
+		},
 		FindByIDFunc: func(ctx context.Context, id string) (*entity.User, error) {
 			return nil, repository.ErrUserNotFound
 		},
