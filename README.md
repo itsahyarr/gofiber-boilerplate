@@ -217,8 +217,8 @@ The `docker-compose.yml` sets up a complete sharded cluster with a Query Router 
     "lastPage": 5,
     "links": [
       { "url": null, "label": "&laquo; Previous", "active": false },
-      { "url": "http://localhost:3000/api/v1/users?page=1", "label": "1", "active": true },
-      { "url": "http://localhost:3000/api/v1/users?page=2", "label": "Next &raquo;", "active": false }
+      { "url": "http://localhost:3000/api/v1/users?per-page=10&page=1", "label": "1", "active": true },
+      { "url": "http://localhost:3000/api/v1/users?per-page=10&page=2", "label": "Next &raquo;", "active": false }
     ],
     "path": "http://localhost:3000/api/v1/users",
     "perPage": 10,

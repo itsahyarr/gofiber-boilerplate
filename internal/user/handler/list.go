@@ -18,7 +18,7 @@ import (
 // @Produce      json
 // @Security     BearerAuth
 // @Param        page query int false "Page number" default(1)
-// @Param        perPage query int false "Items per page" default(10)
+// @Param        per-page query int false "Items per page" default(10)
 // @Success      200 {object} response.PaginatedResponse{data=[]dto.UserResponse}
 // @Failure      401 {object} response.Response
 // @Failure      403 {object} response.Response
@@ -26,7 +26,7 @@ import (
 // @Router       /users [get]
 func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("perPage", "10"))
+	perPage, _ := strconv.Atoi(c.Query("per-page", "10"))
 
 	if page < 1 {
 		page = 1
