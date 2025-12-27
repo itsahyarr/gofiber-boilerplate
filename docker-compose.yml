@@ -1,0 +1,196 @@
+version: '3.8'
+
+services:
+  # Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gofiber-api
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=info
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3000
+      - MONGODB_URI=mongodb://mongos:27017
+      - MONGODB_DATABASE=gofiber_boilerplate
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - TOKEN_SYMMETRIC_KEY=${TOKEN_SYMMETRIC_KEY:-12345678901234567890123456789012}
+      - ACCESS_TOKEN_DURATION=15m
+      - REFRESH_TOKEN_DURATION=168h
+    depends_on:
+      mongos:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis
+  redis:
+    image: redis:7.4-alpine
+    container_name: gofiber-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Config Server (Replica Set)
+  mongo-config:
+    image: mongo:7.0
+    container_name: mongo-config
+    command: mongod --configsvr --replSet configReplSet --bind_ip_all --port 27019
+    volumes:
+      - mongo-config-data:/data/configdb
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MongoDB Shard 1 (Replica Set)
+  mongo-shard1:
+    image: mongo:7.0
+    container_name: mongo-shard1
+    command: mongod --shardsvr --replSet shard1ReplSet --bind_ip_all --port 27018
+    volumes:
+      - mongo-shard1-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MongoDB Shard 2 (Replica Set)
+  mongo-shard2:
+    image: mongo:7.0
+    container_name: mongo-shard2
+    command: mongod --shardsvr --replSet shard2ReplSet --bind_ip_all --port 27018
+    volumes:
+      - mongo-shard2-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MongoDB Router (mongos)
+  mongos:
+    image: mongo:7.0
+    container_name: mongos
+    command: mongos --configdb configReplSet/mongo-config:27019 --bind_ip_all --port 27017
+    ports:
+      - "27017:27017"
+    depends_on:
+      mongo-config:
+        condition: service_healthy
+      mongo-shard1:
+        condition: service_healthy
+      mongo-shard2:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MongoDB Initialization
+  mongo-init:
+    image: mongo:7.0
+    container_name: mongo-init
+    depends_on:
+      mongos:
+        condition: service_healthy
+    networks:
+      - app-network
+    entrypoint: |
+      bash -c '
+        echo "Waiting for MongoDB components..."
+        sleep 10
+        
+        echo "Initializing Config Server Replica Set..."
+        mongosh --host mongo-config:27019 --eval "
+          rs.initiate({
+            _id: \"configReplSet\",
+            configsvr: true,
+            members: [{ _id: 0, host: \"mongo-config:27019\" }]
+          });
+        " || echo "Config RS already initialized"
+        
+        sleep 5
+        
+        echo "Initializing Shard 1 Replica Set..."
+        mongosh --host mongo-shard1:27018 --eval "
+          rs.initiate({
+            _id: \"shard1ReplSet\",
+            members: [{ _id: 0, host: \"mongo-shard1:27018\" }]
+          });
+        " || echo "Shard1 RS already initialized"
+        
+        echo "Initializing Shard 2 Replica Set..."
+        mongosh --host mongo-shard2:27018 --eval "
+          rs.initiate({
+            _id: \"shard2ReplSet\",
+            members: [{ _id: 0, host: \"mongo-shard2:27018\" }]
+          });
+        " || echo "Shard2 RS already initialized"
+        
+        sleep 10
+        
+        echo "Adding shards to cluster..."
+        mongosh --host mongos:27017 --eval "
+          sh.addShard(\"shard1ReplSet/mongo-shard1:27018\");
+          sh.addShard(\"shard2ReplSet/mongo-shard2:27018\");
+          
+          // Enable sharding for database
+          sh.enableSharding(\"gofiber_boilerplate\");
+          
+          // Shard the users collection by _id (hashed)
+          sh.shardCollection(\"gofiber_boilerplate.users\", { _id: \"hashed\" });
+        " || echo "Shards already added"
+        
+        echo "MongoDB Sharded Cluster initialized successfully!"
+      '
+    restart: "no"
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mongo-config-data:
+  mongo-shard1-data:
+  mongo-shard2-data:
