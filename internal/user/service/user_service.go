@@ -157,7 +157,7 @@ func (s *userServiceImpl) RegisterWithStats(ctx context.Context, user *entity.Us
 	defer session.EndSession(ctx)
 
 	// 2. Use WithTransaction to wrap your logic
-	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (interface{}, error) {
+	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (any, error) {
 		// --- OPERATION 1: Create User ---
 		// We use the repository but we must ensure the repository methods can accept the session context
 		// Currently the repo methods use the context passed to them.

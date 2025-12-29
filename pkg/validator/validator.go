@@ -12,12 +12,12 @@ func init() {
 }
 
 // ValidateStruct validates a struct using go-playground/validator
-func ValidateStruct(s interface{}) error {
+func ValidateStruct(s any) error {
 	return validate.Struct(s)
 }
 
 // ParseAndValidate parses JSON body and validates the struct
-func ParseAndValidate(c *fiber.Ctx, s interface{}) error {
+func ParseAndValidate(c *fiber.Ctx, s any) error {
 	if err := c.BodyParser(s); err != nil {
 		return err
 	}

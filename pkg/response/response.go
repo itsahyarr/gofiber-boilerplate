@@ -8,12 +8,12 @@ import (
 
 // Response represents a standard API response
 type Response struct {
-	Success bool        `json:"success"`
-	Code    int         `json:"code"`
-	Status  string      `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   *ErrorInfo  `json:"error,omitempty"`
+	Success bool       `json:"success"`
+	Code    int        `json:"code"`
+	Status  string     `json:"status"`
+	Message string     `json:"message,omitempty"`
+	Data    any        `json:"data,omitempty"`
+	Error   *ErrorInfo `json:"error,omitempty"`
 }
 
 // ErrorInfo represents error details
@@ -24,13 +24,13 @@ type ErrorInfo struct {
 
 // PaginatedResponse represents a paginated API response (Laravel-style)
 type PaginatedResponse struct {
-	Success bool        `json:"success"`
-	Code    int         `json:"code"`
-	Status  string      `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Meta    *Meta       `json:"meta,omitempty"`
-	Links   []LinkItem  `json:"links,omitempty"`
+	Success bool       `json:"success"`
+	Code    int        `json:"code"`
+	Status  string     `json:"status"`
+	Message string     `json:"message,omitempty"`
+	Data    any        `json:"data,omitempty"`
+	Meta    *Meta      `json:"meta,omitempty"`
+	Links   []LinkItem `json:"links,omitempty"`
 }
 
 // LinkItem represents a single pagination link
@@ -60,7 +60,7 @@ type Meta struct {
 type Pagination = Meta
 
 // Success sends a successful response
-func Success(c *fiber.Ctx, statusCode int, message string, data interface{}) error {
+func Success(c *fiber.Ctx, statusCode int, message string, data any) error {
 	return c.Status(statusCode).JSON(Response{
 		Success: true,
 		Code:    statusCode,
@@ -112,7 +112,7 @@ func getStatus(code int) string {
 }
 
 // Paginated sends a paginated response (Laravel-style)
-func Paginated(c *fiber.Ctx, statusCode int, message string, data interface{}, page, perPage int, total int64) error {
+func Paginated(c *fiber.Ctx, statusCode int, message string, data any, page, perPage int, total int64) error {
 	lastPage := int(total) / perPage
 	if int(total)%perPage > 0 {
 		lastPage++
